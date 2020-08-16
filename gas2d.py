@@ -10,6 +10,8 @@ from scipy.integrate import RK45
 import suport_functions
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp2d
+from matplotlib import animation
+
 n=80;
 L=5
 
@@ -17,8 +19,8 @@ x=np.linspace(0,L,n);
 y=np.linspace(0,L,n);
 (xx,yy)=np.meshgrid(x,y)
 
-pointsx=range(n//4,n//4+20);
-pointsy=[n//2] * 20
+pointsx=range(n//7,int(n/2.5));
+pointsy=[n//2] * len(pointsx)
 
 
 
@@ -80,29 +82,51 @@ def uDerivative(t,u):
 
 du=uDerivative(0,u0)
 
+
 u=u0;
 sol=RK45(uDerivative,0,u,100,vectorized=False)
 
+t_list=[]
 
-for i in range(500):
+save_folder='video_frames1'
+
+n_new=18;
+plot_indexs=np.rint(np.linspace(0,n-1,n_new)).astype(int)
+(plot_indexsxx,plot_indexsyy)=np.meshgrid(plot_indexs,plot_indexs)
+plot_indexsyy=np.reshape(plot_indexsyy,n_new*n_new)
+plot_indexsxx=np.reshape(plot_indexsxx,n_new*n_new)
+
+fig, ax = plt.subplots()
+fig.set_size_inches(10.5, 10.5, forward=True)
+ax.axes.xaxis.set_visible(False)
+ax.axes.yaxis.set_visible(False)
+
+up=np.reshape(u,(3,n*n))
+up=np.reshape(up,(3,n,n))
+Q = ax.quiver(xx[plot_indexsxx,plot_indexsyy],yy[plot_indexsxx,plot_indexsyy],up[0,plot_indexsxx,plot_indexsyy],up[1,plot_indexsxx,plot_indexsyy],scale=1)
+
+
+def update_quiver(num):
+    """updates the horizontal and vertical vector components by a
+    fixed increment on each frame
+    """
+
     sol.step()
     print('t:',sol.t)
     u=sol.y
-    #u=u+0.0005*uDerivative(0,u)
-    
+        
     up=np.reshape(u,(3,n*n))
     up=np.reshape(up,(3,n,n))
     
-    n_new=18;
-    plot_indexs=np.rint(np.linspace(0,n-1,n_new)).astype(int)
-    (plot_indexsxx,plot_indexsyy)=np.meshgrid(plot_indexs,plot_indexs)
-    plot_indexsyy=np.reshape(plot_indexsyy,n_new*n_new)
-    plot_indexsxx=np.reshape(plot_indexsxx,n_new*n_new)
+    Q.set_UVC(up[0,plot_indexsxx,plot_indexsyy],up[1,plot_indexsxx,plot_indexsyy])
+    
+    return Q,
+
+
+anim = animation.FuncAnimation(fig, update_quiver,blit=False, interval=10,
+                              repeat=True, save_count=400)
+
+anim.save("basic_animation.mp4",fps=10)
+plt.show()
 
     
-    
-    fig, ax = plt.subplots()
-    q = ax.quiver(xx[plot_indexsxx,plot_indexsyy],yy[plot_indexsxx,plot_indexsyy],up[0,plot_indexsxx,plot_indexsyy],up[1,plot_indexsxx,plot_indexsyy],scale=1)
-    plt.show()
-
-
