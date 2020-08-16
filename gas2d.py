@@ -12,26 +12,31 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import interp2d
 from matplotlib import animation
 
-n=80;
+
+n=160;
 L=5
 
 x=np.linspace(0,L,n);
 y=np.linspace(0,L,n);
 (xx,yy)=np.meshgrid(x,y)
 
+pointsx1=range(n//7-1,int(n/2.5)-1);
 pointsx=range(n//7,int(n/2.5));
+pointsx2=range(n//7+1,int(n/2.5)+1);
 pointsy=[n//2] * len(pointsx)
 
 
 
 vx=np.zeros((n,n));
-vx[pointsx,pointsy]=0.04;
+vx[pointsx1,pointsy]=0.025;
+vx[pointsx,pointsy]=0.05;
+vx[pointsx2,pointsy]=0.025;
 
 Bvx=np.logical_or(xx==0,xx==L)
 Bvx[pointsx,pointsy]=True;
 
 vy=np.zeros((n,n));
-vy[pointsx,pointsy]=0.01;
+vy[pointsx,pointsy]=0.012;
 Bvy=np.logical_or(yy==0,yy==L)
 Bvy[pointsx,pointsy]=True;
 
@@ -86,6 +91,10 @@ du=uDerivative(0,u0)
 u=u0;
 sol=RK45(uDerivative,0,u,100,vectorized=False)
 
+
+
+#sol.h_abs = 0.0001
+
 t_list=[]
 
 save_folder='video_frames1'
@@ -100,11 +109,19 @@ fig, ax = plt.subplots()
 fig.set_size_inches(10.5, 10.5, forward=True)
 ax.axes.xaxis.set_visible(False)
 ax.axes.yaxis.set_visible(False)
+plt.tight_layout()
 
 up=np.reshape(u,(3,n*n))
 up=np.reshape(up,(3,n,n))
 Q = ax.quiver(xx[plot_indexsxx,plot_indexsyy],yy[plot_indexsxx,plot_indexsyy],up[0,plot_indexsxx,plot_indexsyy],up[1,plot_indexsxx,plot_indexsyy],scale=1)
 
+t=0;
+
+num_p=50;
+pa_xx=np.random.uniform(low=0.5, high=4.5, size=(num_p))
+pa_yy=np.random.uniform(low=0.5, high=4.5, size=(num_p))
+
+#sc=ax.scatter(pa_xx,pa_yy)
 
 def update_quiver(num):
     """updates the horizontal and vertical vector components by a
@@ -114,19 +131,38 @@ def update_quiver(num):
     sol.step()
     print('t:',sol.t)
     u=sol.y
-        
     up=np.reshape(u,(3,n*n))
     up=np.reshape(up,(3,n,n))
+    
+    global pa_xx
+    global pa_yy
+    
+    
+    pa_vx_i = np.floor(pa_xx/L*n).astype(int)
+    pa_vy_i = np.floor(pa_yy/L*n).astype(int)
+    
+    pa_vx_i[pa_vx_i>=n]=n-1
+    pa_vy_i[pa_vy_i>=n]=n-1
+    
+    pa_vx_i = list(pa_vx_i)
+    pa_vy_i = list(pa_vy_i)
+
+    pa_xx=pa_xx+1000*sol.h_abs*up[0,pa_vx_i,pa_vy_i]
+    pa_yy=pa_yy+1000*sol.h_abs*up[1,pa_vx_i,pa_vy_i]
+    
+    
+    data = np.hstack((pa_xx[:,np.newaxis], pa_yy[:, np.newaxis]))
+    #sc.set_offsets(data)
     
     Q.set_UVC(up[0,plot_indexsxx,plot_indexsyy],up[1,plot_indexsxx,plot_indexsyy])
     
     return Q,
 
 
-anim = animation.FuncAnimation(fig, update_quiver,blit=False, interval=10,
-                              repeat=True, save_count=400)
+anim = animation.FuncAnimation(fig, update_quiver,blit=False, interval=0.5,
+                              repeat=True, save_count=800)
 
-anim.save("basic_animation.mp4",fps=10)
+anim.save("basic_animation.mp4",fps=60)
 plt.show()
 
     
